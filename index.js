@@ -1,30 +1,20 @@
 var Stream = require("stream")
-var writeMethods = ["write", "end", "destroy"]
-var readMethods = ["resume", "pause"]
-var readEvents = ["data", "close"]
-var slice = Array.prototype.slice
+    , writeMethods = ["write", "end", "destroy"]
+    , readMethods = ["resume", "pause"]
+    , readEvents = ["data", "close"]
+    , slice = Array.prototype.slice
 
 module.exports = duplex
 
-function forEach (arr, fn) {
-    if (arr.forEach) {
-        return arr.forEach(fn)
-    }
-
-    for (var i = 0; i < arr.length; i++) {
-        fn(arr[i], i)
-    }
-}
-
 function duplex(writer, reader) {
     var stream = new Stream()
-    var ended = false
+        , ended = false
 
-    forEach(writeMethods, proxyWriter)
+    writeMethods.forEach(proxyWriter)
 
-    forEach(readMethods, proxyReader)
+    readMethods.forEach(proxyReader)
 
-    forEach(readEvents, proxyStream)
+    readEvents.forEach(proxyStream)
 
     reader.on("end", handleEnd)
 
@@ -44,7 +34,14 @@ function duplex(writer, reader) {
         stream[methodName] = method
 
         function method() {
-            return writer[methodName].apply(writer, arguments)
+            var r;
+            try{
+                r = writer[methodName].apply(writer, arguments)
+            }
+            catch(e){
+                reemit(e); 
+            }
+            return r;
         }
     }
 
@@ -55,7 +52,14 @@ function duplex(writer, reader) {
             stream.emit(methodName)
             var func = reader[methodName]
             if (func) {
-                return func.apply(reader, arguments)
+                var r;
+                try{
+                    r = func.apply(reader, arguments)
+                }
+                catch(e){
+                    reemit(e);
+                }
+                return r;
             }
             reader.emit(methodName)
         }
